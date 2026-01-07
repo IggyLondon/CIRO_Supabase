@@ -1,0 +1,23 @@
+name: Keep Automultiservice Instagram Feed Awake
+
+on:
+  schedule:
+    # Run every 5 days at 14:00 UTC (offset from the other workflow)
+    - cron: '0 14 */5 * *'
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping Supabase Database
+        run: |
+          curl -X GET \
+            'https://mpkcriucayjbnmyyvjdr.supabase.co/rest/v1/instagram_posts?select=id&limit=1' \
+            -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wa2NyaXVjYXlqYm5teXl2amRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDYyNzEsImV4cCI6MjA4MjQyMjI3MX0.tb_JG57ErmJ33YKIoNhwuuDVXTPWgvSLx8nD7MQWWgU' \
+            -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1wa2NyaXVjYXlqYm5teXl2amRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4NDYyNzEsImV4cCI6MjA4MjQyMjI3MX0.tb_JG57ErmJ33YKIoNhwuuDVXTPWgvSLx8nD7MQWWgU' \
+            -H 'Content-Type: application/json'
+      
+      - name: Log Success
+        run: echo "✅ Automultiservice Supabase project pinged successfully at $(date)"
