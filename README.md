@@ -1,4 +1,4 @@
-# CIRO Supabase Keep-Alive
+# CIRO & Automultiservice 2.0 Supabase Keep-Alive
 
 This repository contains a GitHub Actions workflow that automatically keeps your Supabase project active by pinging the database every 5 days.
 
