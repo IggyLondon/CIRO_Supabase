@@ -2,8 +2,8 @@ name: Keep Supabase Project Awake
 
 on:
   schedule:
-    # Run every 5 days at 12:00 UTC
-    - cron: '0 12 */5 * *'
+    # Run every 6 hours (safer than 5 days - ensures it never reaches 7 days)
+    - cron: '0 */6 * * *'
   workflow_dispatch:  # Allow manual trigger from GitHub UI
 
 jobs:
@@ -11,13 +11,47 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Ping Supabase Database
+      - name: Validate secrets
         run: |
-          curl -X GET \
-            'https://emnuwkxroirerhbablfr.supabase.co/rest/v1/gallery_images?select=id&limit=1' \
-            -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbnV3a3hyb2lyZXJoYmFibGZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NDI3OTgsImV4cCI6MjA3NjUxODc5OH0.5RCVrNcWG_cF8OOcRUibvO5wqPGtFnx9odm69OKV1_0' \
-            -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbnV3a3hyb2lyZXJoYmFibGZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5NDI3OTgsImV4cCI6MjA3NjUxODc5OH0.5RCVrNcWG_cF8OOcRUibvO5wqPGtFnx9odm69OKV1_0' \
-            -H 'Content-Type: application/json'
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then 
+            echo "❌ Missing SUPABASE_URL secret"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then 
+            echo "❌ Missing SUPABASE_ANON_KEY secret"
+            exit 1
+          fi
+          echo "✅ All secrets are configured"
+
+      - name: Ping Supabase Database (with detailed logging)
+        run: |
+          set -e
+          URL="${{ secrets.SUPABASE_URL }}/rest/v1/gallery_images?select=id&limit=1"
+          echo "🔗 Pinging: $URL"
+          
+          HTTP_CODE=$(curl -sS -o /tmp/response.txt -w "%{http_code}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Content-Type: application/json" \
+            "$URL")
+          
+          echo "📊 HTTP Status: $HTTP_CODE"
+          echo "📄 Response:"
+          cat /tmp/response.txt
+          echo ""
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Success! Supabase is responding correctly"
+            exit 0
+          else
+            echo "❌ Failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
       
       - name: Log Success
-        run: echo "✅ Supabase project pinged successfully at $(date)"
+        if: success()
+        run: echo "✅ Supabase Gallery project pinged successfully at $(date)"
+      
+      - name: Log Failure
+        if: failure()
+        run: echo "❌ Failed to ping Supabase at $(date)"
